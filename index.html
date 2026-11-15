@@ -3,600 +3,254 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Doctor AI</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='13' fill='%230e1822'/%3E%3Cpath d='M7 25h9l3-8 5 15 4-11 2 4h11' fill='none' stroke='%233df2c2' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>RESQ Co-Pilot | Triage HUD</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:ital,wght@0,400;0,600;1,600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #070d13;
-    --panel: #0e1822;
-    --panel-2: #132230;
-    --line: #1f3547;
-    --ink: #e6f1f5;
-    --muted: #7f98a8;
-    --mint: #3df2c2;
-    --mint-dim: #1b8f78;
-    --amber: #ffb02e;
-    --red: #ff4d5e;
-    --green: #4be38a;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
-    color: var(--ink);
-    line-height: 1.55;
-    background:
-      radial-gradient(900px 500px at 85% -10%, rgba(61,242,194,0.10), transparent 60%),
-      radial-gradient(700px 500px at -10% 30%, rgba(60,120,255,0.08), transparent 60%),
-      var(--bg);
-    background-attachment: fixed;
-  }
-  .mono { font-family: "IBM Plex Mono", Consolas, monospace; }
+:root{
+  --bg:#050816; --panel:#0a1022; --panel-2:#0d1530; --line:#1b2a4a;
+  --cyan:#06b6d4; --cyan-soft:#67e8f9; --text:#e6edf7; --muted:#7b8aa8;
+  --green:#10b981; --yellow:#f59e0b; --red:#ef4444; --grey:#64748b;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  --sans:'Inter',system-ui,-apple-system,sans-serif;
+  --state:var(--grey);            /* changed by [data-state] below */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--mono);
+  background-image:linear-gradient(rgba(6,182,212,.04) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(6,182,212,.04) 1px,transparent 1px);
+  background-size:80px 80px;display:flex;flex-direction:column;min-height:100vh;
+}
 
-  /* ---------- top bar ---------- */
-  header {
-    max-width: 1100px; margin: 0 auto; padding: 22px 20px 6px;
-    display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
-  }
-  .brand { display: flex; align-items: center; gap: 12px; }
-  .brand svg { width: 52px; height: 52px; }
-  .brand h1 { margin: 0; font-size: 1.7rem; letter-spacing: -0.3px; }
-  .brand h1 span { color: var(--mint); }
-  .brand p { margin: 0; color: var(--muted); font-size: 0.85rem; }
-  select {
-    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
-    padding: 9px 12px; border-radius: 8px; font-family: inherit; font-size: 0.95rem;
-  }
+/* ---------- top bar ---------- */
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:14px 24px;background:rgba(10,16,34,.9);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:14px}
+.dot{width:16px;height:16px;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px var(--cyan)}
+.brand h1{font-size:22px;letter-spacing:.12em;color:var(--cyan);display:inline-block}
+.badge{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--cyan-soft);
+  border:1px solid var(--cyan);background:rgba(6,182,212,.12);padding:3px 10px;border-radius:4px;margin-left:10px}
+.brand small{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.telemetry{display:flex;align-items:center;gap:24px;font-size:13px;flex-wrap:wrap}
+.telemetry b{color:var(--cyan);margin-right:6px}
+.live{display:flex;align-items:center;gap:8px;color:var(--green);border:1px solid rgba(16,185,129,.5);
+  background:rgba(16,185,129,.1);padding:6px 14px;border-radius:999px;font-size:12px;letter-spacing:.06em}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.3}}
 
-  /* ---------- layout ---------- */
-  main {
-    max-width: 1100px; margin: 0 auto; padding: 14px 20px 40px;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
-  }
-  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
-  .panel {
-    background: linear-gradient(180deg, var(--panel), #0b141c);
-    border: 1px solid var(--line); border-radius: 16px; padding: 18px;
-  }
-  .panel h2 { margin: 0 0 12px; font-size: 0.95rem; color: var(--muted); font-weight: 500; }
-  .wide { grid-column: 1 / -1; }
+/* ---------- layout ---------- */
+main{flex:1;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:30px;
+  padding:30px 5vw;align-items:start;max-width:1500px;width:100%;margin:0 auto}
+@media(max-width:900px){main{grid-template-columns:1fr;padding:20px 16px}}
 
-  /* ---------- scanner ---------- */
-  .viewer {
-    position: relative; background: #03080c; border: 1px solid var(--line);
-    border-radius: 12px; min-height: 280px; overflow: hidden;
-    display: flex; align-items: center; justify-content: center; color: var(--muted);
-  }
-  video, canvas { width: 100%; max-height: 420px; object-fit: contain; display: none; }
-  .c { position: absolute; width: 34px; height: 34px; border: 3px solid var(--mint); pointer-events: none; }
-  .c.tl { top: 12px; left: 12px; border-right: 0; border-bottom: 0; border-radius: 8px 0 0 0; }
-  .c.tr { top: 12px; right: 12px; border-left: 0; border-bottom: 0; border-radius: 0 8px 0 0; }
-  .c.bl { bottom: 12px; left: 12px; border-right: 0; border-top: 0; border-radius: 0 0 0 8px; }
-  .c.br { bottom: 12px; right: 12px; border-left: 0; border-top: 0; border-radius: 0 0 8px 0; }
-  .scan-line {
-    position: absolute; left: 0; right: 0; height: 70px; display: none; pointer-events: none;
-    background: linear-gradient(180deg, transparent, rgba(61,242,194,0.35), transparent);
-    border-bottom: 2px solid var(--mint);
-  }
-  .viewer.scanning .scan-line { display: block; animation: sweep 1.6s ease-in-out infinite; }
-  @keyframes sweep { 0% { top: -70px; } 100% { top: 100%; } }
+/* ---------- camera card ---------- */
+.cam{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.viewport{position:relative;aspect-ratio:16/9;background:#000}
+.viewport video,.viewport canvas{width:100%;height:100%;object-fit:cover;display:block}
+.cam-label{position:absolute;top:20px;left:60px;z-index:2;display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--cyan-soft);background:rgba(5,8,22,.85);border:1px solid var(--line);
+  padding:9px 14px;border-radius:8px}
+.cam-label i{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.corner{position:absolute;width:30px;height:30px;border:2px solid var(--cyan);z-index:2;pointer-events:none}
+.corner.tl{top:16px;left:16px;border-right:0;border-bottom:0}
+.corner.tr{top:16px;right:16px;border-left:0;border-bottom:0}
+.corner.bl{bottom:16px;left:16px;border-right:0;border-top:0}
+.corner.br{bottom:16px;right:16px;border-left:0;border-top:0}
+.controls{display:flex;gap:16px;align-items:center;padding:20px;background:var(--panel-2);border-top:1px solid var(--line)}
+.voice{flex:1;display:flex;align-items:center;gap:12px;background:#060b1a;border:1px solid var(--line);border-radius:14px;padding:10px}
+.mic{width:44px;height:44px;border-radius:10px;border:0;background:#18223d;color:var(--text);
+  display:grid;place-items:center;cursor:pointer}
+.mic:hover,.mic.on{background:var(--red)}
+.voice input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font:13px var(--mono)}
+.voice input::placeholder{color:var(--muted)}
+.voice:focus-within{border-color:var(--cyan)}
+.capture{display:flex;align-items:center;gap:10px;border:0;cursor:pointer;color:#fff;
+  font:700 13px var(--mono);letter-spacing:.06em;padding:0 26px;height:46px;border-radius:12px;
+  background:linear-gradient(90deg,#dc1f1f,#ff1744);box-shadow:0 0 22px rgba(255,23,68,.45)}
+.capture:disabled{opacity:.5;cursor:wait}
+@media(max-width:600px){.controls{flex-direction:column;align-items:stretch}.capture{justify-content:center}}
 
-  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-  button, .file-btn {
-    font-family: inherit; font-size: 0.95rem; font-weight: 500; cursor: pointer;
-    padding: 11px 18px; border-radius: 10px; border: 1px solid var(--line);
-    background: var(--panel-2); color: var(--ink); transition: 0.15s;
-  }
-  button:hover, .file-btn:hover { border-color: var(--mint); color: var(--mint); }
-  button.primary { background: var(--mint); color: #04201a; border-color: var(--mint); font-weight: 700; }
-  button.primary:hover { background: #7bf7d9; color: #04201a; }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+/* ---------- triage card ---------- */
+.triage{background:var(--panel);border:1px solid var(--state);border-radius:26px;padding:28px;
+  box-shadow:0 0 40px color-mix(in srgb,var(--state) 28%,transparent);transition:border-color .3s,box-shadow .3s}
+.triage[data-state="green"]{--state:var(--green)}
+.triage[data-state="yellow"]{--state:var(--yellow)}
+.triage[data-state="red"]{--state:var(--red)}
+.triage[data-state="undetermined"]{--state:var(--grey)}
+.t-head{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding-bottom:22px;border-bottom:1px solid var(--line)}
+.t-head small{display:block;font-size:11px;letter-spacing:.1em;color:var(--muted);margin-bottom:6px}
+.t-head strong{font-size:13px;letter-spacing:.08em}
+.pill{background:var(--state);color:#04140d;font-weight:700;font-size:14px;letter-spacing:.08em;
+  padding:12px 22px;border-radius:999px;white-space:nowrap}
+.triage[data-state="undetermined"] .pill{color:#fff}
+.guidance{margin-top:26px;background:var(--panel-2);border:1px solid var(--line);border-radius:16px;padding:20px}
+.g-top{display:flex;justify-content:space-between;align-items:center;font:13px var(--sans);margin-bottom:12px}
+.g-top span:first-child{display:flex;gap:8px;align-items:center;color:var(--text)}
+.g-top svg{color:var(--cyan)}
+.g-top em{font:11px var(--mono);color:var(--green);font-style:normal;letter-spacing:.04em}
+.guidance p{font:italic 600 17px/1.5 var(--sans)}
+.h-title{margin:28px 0 12px;font-size:11px;letter-spacing:.1em;color:var(--muted)}
+.hazards{list-style:none;display:grid;gap:10px}
+.hazards li{display:flex;align-items:center;gap:12px;font-size:14px;color:#fecaca;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.hazards li svg{color:var(--red);flex:none}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+.actions button{display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;
+  background:#18223d;color:var(--text);border:1px solid var(--line);border-radius:12px;
+  padding:15px;font:700 12px var(--mono);letter-spacing:.06em}
+.actions button:hover{border-color:var(--cyan)}
+.disclaimer{margin-top:18px;font-size:11px;line-height:1.5;color:var(--muted)}
 
-  /* ---------- report ---------- */
-  .empty { color: var(--muted); padding: 40px 10px; text-align: center; }
-  .empty em { display: block; margin-top: 10px; color: var(--amber); }
-  #status { color: var(--muted); margin: 10px 0 0; min-height: 1.4em; }
-  #status.error { color: var(--red); }
-  .badge {
-    display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700;
-  }
-  .badge.home_care  { background: rgba(75,227,138,.15); color: var(--green); border: 1px solid var(--green); }
-  .badge.see_doctor { background: rgba(255,176,46,.15); color: var(--amber); border: 1px solid var(--amber); }
-  .badge.emergency  { background: rgba(255,77,94,.18);  color: var(--red);   border: 1px solid var(--red); }
-  .r-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .r-type { font-size: 1.5rem; font-weight: 700; margin: 8px 0 2px; }
-  .gauge { margin: 14px 0 4px; }
-  .gauge-bar {
-    position: relative; height: 10px; border-radius: 99px;
-    background: linear-gradient(90deg, var(--green), var(--amber), var(--red));
-  }
-  .gauge-dot {
-    position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%;
-    background: #fff; border: 3px solid var(--bg); transform: translate(-50%, -50%);
-  }
-  .gauge-lbl { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
-  .stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-  .stat small { display: block; color: var(--muted); font-size: 0.75rem; }
-  .stat b { font-size: 1rem; }
-  .sec-title { margin: 16px 0 6px; font-size: 0.8rem; color: var(--mint); font-weight: 700; letter-spacing: 0.5px; }
-  .sec-title.red { color: var(--red); }
-  .sec-title.amber { color: var(--amber); }
-  .check { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--line); cursor: pointer; }
-  .check input { margin-top: 5px; accent-color: var(--mint); width: 16px; height: 16px; }
-  .check input:checked + span { color: var(--muted); text-decoration: line-through; }
-  ul.plain { margin: 0; padding-left: 20px; }
-  ul.plain li { margin: 4px 0; }
-  .emergency-box {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
-    background: rgba(255,77,94,.12); border: 1px solid var(--red); border-radius: 12px;
-    padding: 12px 14px; margin-bottom: 14px;
-  }
-  .emergency-box a {
-    background: var(--red); color: #fff; text-decoration: none; font-weight: 700;
-    padding: 10px 16px; border-radius: 10px;
-  }
-
-  /* ---------- meme card ---------- */
-  .meme {
-    text-align: center; margin: 14px 0; padding: 18px 12px;
-    background: radial-gradient(circle at 50% 30%, #1d3345, #05090d);
-    border: 2px dashed var(--amber); border-radius: 14px;
-  }
-  .meme .emo { font-size: 4rem; line-height: 1.1; }
-  .meme .t {
-    font-family: Impact, "Arial Black", sans-serif; text-transform: uppercase;
-    color: #fff; font-size: 1.6rem; letter-spacing: 1px; line-height: 1.15; margin: 6px 0;
-    text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
-  }
-  #jokeBox {
-    margin-top: 12px; padding: 12px 14px; border-radius: 10px; display: none;
-    background: rgba(255,176,46,.10); border: 1px solid var(--amber); color: var(--ink);
-  }
-
-  /* ---------- chat ---------- */
-  #chatLog { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; margin-bottom: 10px; }
-  .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; white-space: pre-wrap; }
-  .msg.me { align-self: flex-end; background: var(--mint-dim); color: #fff; }
-  .msg.ai { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--line); }
-  .chat-row { display: flex; gap: 10px; }
-  .chat-row input {
-    flex: 1; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
-    border-radius: 10px; padding: 11px 14px; font-family: inherit; font-size: 0.95rem;
-  }
-
-  /* ---------- history ---------- */
-  #history { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
-  .h-item {
-    flex: 0 0 auto; width: 120px; background: var(--panel-2); border: 1px solid var(--line);
-    border-radius: 10px; padding: 6px; cursor: pointer; text-align: left; color: var(--ink);
-  }
-  .h-item img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; display: block; }
-  .h-item span { display: block; font-size: 0.75rem; margin-top: 4px; }
-  .h-item small { color: var(--muted); font-size: 0.7rem; }
-
-  .disclaimer { grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); text-align: center; }
-
-  @media (prefers-reduced-motion: reduce) { .viewer.scanning .scan-line { animation: none; top: 40%; } }
+footer{padding:14px 26px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);letter-spacing:.04em}
+:focus-visible{outline:2px solid var(--cyan-soft);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 
 <header>
   <div class="brand">
-    <svg viewBox="0 0 48 48" aria-hidden="true">
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#3df2c2"/>
-          <stop offset="1" stop-color="#2f8cff"/>
-        </linearGradient>
-      </defs>
-      <rect x="1.5" y="1.5" width="45" height="45" rx="13" fill="#0e1822" stroke="url(#lg)" stroke-width="2"/>
-      <path d="M24 11v26M11 24h26" stroke="url(#lg)" stroke-width="6" stroke-linecap="round" opacity="0.25"/>
-      <path d="M7 25h9l3-8 5 15 4-11 2 4h11" fill="none" stroke="url(#lg)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
+    <span class="dot"></span>
     <div>
-      <h1>Doctor <span>AI</span></h1>
-      <p>Ouch? Doctor AI is in. Let's check it.</p>
+      <h1>RESQ CO-PILOT</h1><span class="badge">TRIAGE HUD v3.6</span>
+      <small>Autonomous Tactical Emergency Response System</small>
     </div>
   </div>
-  <select id="lang" aria-label="Report language">
-    <option value="English">English</option>
-    <option value="Hindi">हिन्दी (Hindi)</option>
-  </select>
+  <div class="telemetry">
+    <span><b>GPS:</b><span id="gps">locating…</span></span>
+    <span><b>SYS TIME:</b><span id="clock">--:--:--</span></span>
+    <span class="live"><i></i>LIVE LINK ACTIVE</span>
+  </div>
 </header>
 
 <main>
-
-  <!-- LEFT: scanner -->
-  <section class="panel">
-    <h2>SCANNER</h2>
-    <div class="viewer" id="viewer">
-      <span id="placeholder">Open the camera or upload a photo</span>
-      <video id="video" autoplay playsinline></video>
-      <canvas id="canvas"></canvas>
-      <span class="c tl"></span><span class="c tr"></span><span class="c bl"></span><span class="c br"></span>
-      <div class="scan-line"></div>
-    </div>
-    <div class="row">
-      <button id="startBtn">Open camera</button>
-      <button id="captureBtn" disabled>Capture</button>
-      <label class="file-btn">Upload photo
-        <input type="file" id="fileInput" accept="image/*" hidden>
+  <!-- LEFT: camera -->
+  <section class="cam" aria-label="Camera">
+    <span class="corner tl"></span><span class="corner tr"></span>
+    <span class="corner bl"></span><span class="corner br"></span>
+    <div class="cam-label"><i></i>OPTICAL SENSOR // CAM_01</div>
+    <div class="viewport"><video id="video" autoplay playsinline muted></video></div>
+    <div class="controls">
+      <label class="voice">
+        <button type="button" class="mic" id="mic" aria-label="Dictate voice log">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </button>
+        <input id="voiceLog" type="text" placeholder="Voice log input (e.g., 'Patient unconscious')...">
       </label>
-    </div>
-    <div class="row">
-      <button id="analyzeBtn" class="primary" disabled>Analyze wound</button>
-    </div>
-    <p id="status"></p>
-  </section>
-
-  <!-- RIGHT: report -->
-  <section class="panel">
-    <h2>AI REPORT</h2>
-    <div id="report"><div class="empty">Your wound report will appear here after the scan.</div></div>
-  </section>
-
-  <!-- follow-up chat -->
-  <section class="panel wide">
-    <h2>ASK A FOLLOW-UP QUESTION</h2>
-    <div id="chatLog"></div>
-    <div class="chat-row">
-      <input id="chatInput" placeholder="e.g. Can I wash it with soap? When should I change the bandage?" disabled>
-      <button id="chatBtn" disabled>Ask</button>
+      <button class="capture" id="capture">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        CAPTURE &amp; EVALUATE
+      </button>
     </div>
   </section>
 
-  <!-- history -->
-  <section class="panel wide">
-    <h2>RECENT SCANS</h2>
-    <div id="history"><span style="color:var(--muted)">No scans yet.</span></div>
-  </section>
+  <!-- RIGHT: result -->
+  <aside class="triage" id="triage" data-state="undetermined" aria-live="polite">
+    <div class="t-head">
+      <div><small>TRIAGE CLASSIFICATION</small><strong>S.T.A.R.T. PROTOCOL</strong></div>
+      <span class="pill" id="pill">AWAITING IMAGE</span>
+    </div>
 
-  <p class="disclaimer">
-    Doctor AI is a learning project and gives general information only. It is not a medical diagnosis.
-    For heavy bleeding, deep cuts, animal bites, signs of infection or any doubt, see a doctor or call 112.
-  </p>
+    <div class="guidance">
+      <div class="g-top">
+        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>Spoken guidance</span>
+        <em>VOICE SYNTHESIS</em>
+      </div>
+      <p id="guidance">Point the camera at the injury, then press Capture &amp; Evaluate.</p>
+    </div>
+
+    <h2 class="h-title">DETECTED HAZARDS &amp; TRAUMA</h2>
+    <ul class="hazards" id="hazards"></ul>
+
+    <div class="actions">
+      <button id="replay"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12A9 9 0 0 1 18.5 5.8L21 8M21 3v5h-5M3 21v-5h5"/></svg>REPLAY VOICE</button>
+      <button id="reset"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>RESET SYSTEM</button>
+    </div>
+    <p class="disclaimer">Guidance only, not a diagnosis. If in doubt, call emergency services (112 in India, 911 in the US).</p>
+  </aside>
 </main>
 
+<footer>POWERED BY GOOGLE GEMINI // MULTIMODAL API</footer>
+
 <script>
-  // ================================================================
-  //  PUT YOUR GEMINI API KEY HERE (keep the quotes)
-  // ================================================================
-  const API_KEY = "AQ.Ab8RN6Iua-VvOgNSV63mTh7GCQearWhK47LC-im0qkFjxApBNg";
-  const MODEL   = "gemini-3.8-flash";
+const $ = id => document.getElementById(id);
+const video = $('video'), triage = $('triage');
+let lastSpeech = '';
 
-  // ================================================================
-  //  THE JOKE BANK (edit or add your own lines here!)
-  //  Rule: we only joke about mild and medium wounds, never serious ones.
-  // ================================================================
-  const JOKES = {
-    // shown one by one while the AI is scanning
-    loading: [
-      "Consulting Dr. Google (the good one)...",
-      "Counting your bravery points...",
-      "Asking the bandage for its opinion...",
-      "Scanning... please do not cry, we are professionals...",
-      "Doctor AI is putting on gloves...",
-      "Zooming in. Enhancing. Enhancing more...",
-      "Checking if it is a wound or just a dramatic scratch...",
-      "Warming up the stethoscope..."
-    ],
+/* header telemetry */
+setInterval(() => $('clock').textContent = new Date().toLocaleTimeString(), 1000);
+navigator.geolocation?.getCurrentPosition(p =>
+  $('gps').textContent = `${p.coords.latitude.toFixed(4)}° N, ${p.coords.longitude.toFixed(4)}° E`);
 
-    // meme cards for mild wounds (severity 1-3)
-    mild: [
-      { emoji: "😎", top: "Just a scratch",        bottom: "Still looking cool" },
-      { emoji: "🦸", top: "Battle scar loading",   bottom: "Hero level 1 unlocked" },
-      { emoji: "😌", top: "Is it serious doctor?", bottom: "No, just dramatic" },
-      { emoji: "🩹", top: "One bandage later",     bottom: "Good as new" }
-    ],
+/* camera: rear camera, and surface the error instead of a silent black box */
+navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+  .then(s => video.srcObject = s)
+  .catch(() => render({ classification: 'UNDETERMINED',
+    spoken_guidance: 'Camera unavailable. Allow camera permission and reload.', hazards: ['No camera feed'] }));
 
-    // meme cards for medium wounds (severity 4-7)
-    medium: [
-      { emoji: "😬", top: "Ouch, that stings",    bottom: "But you are a legend" },
-      { emoji: "💪", top: "That looked painful",  bottom: "You are tougher" },
-      { emoji: "🏅", top: "Brave patient award",  bottom: "Goes to you" },
-      { emoji: "🧑‍⚕️", top: "Doctor said rest",     bottom: "Not run a marathon" }
-    ],
+/* reject black / unlit frames before spending an API call */
+function grabFrame() {
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth || 640; c.height = video.videoHeight || 360;
+  const ctx = c.getContext('2d'); ctx.drawImage(video, 0, 0, c.width, c.height);
+  const d = ctx.getImageData(0, 0, c.width, c.height).data; let sum = 0;
+  for (let i = 0; i < d.length; i += 40) sum += (d[i] + d[i + 1] + d[i + 2]) / 3;
+  return { ok: sum / (d.length / 40) > 20, base64: c.toDataURL('image/jpeg', .8).split(',')[1] };
+}
 
-    // playful replies when the photo is NOT a wound (face, food, pet...)
-    noWound: [
-      "Nice photo, but I only treat wounds, not selfies. 📸",
-      "Looks healthy to me! Show me the actual injury, please.",
-      "My AI doctor degree does not cover this. Try a wound photo!",
-      "No wound found. Your skin is doing great, champ."
-    ],
+/* paint a result into the right-hand panel */
+function render(r) {
+  const state = (r.classification || 'UNDETERMINED').toLowerCase();
+  triage.dataset.state = state;
+  $('pill').textContent = { green: 'GREEN — MINOR', yellow: 'YELLOW — DELAYED',
+    red: 'RED — IMMEDIATE', undetermined: 'UNDETERMINED' }[state] || 'UNDETERMINED';
+  $('guidance').textContent = `"${r.spoken_guidance}"`;
+  $('hazards').innerHTML = (r.hazards || []).map(h =>
+    `<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 2 20h20zM12 10v4M12 17.5v.01"/></svg>${h.replace(/</g,'&lt;')}</li>`).join('');
+  speak(r.spoken_guidance);
+}
+function speak(t) {
+  lastSpeech = t; speechSynthesis.cancel();
+  speechSynthesis.speak(new SpeechSynthesisUtterance(t));
+}
 
-    // the Cheer me up button
-    cheerUp: [
-      "What did the cut say to the bandage? You've got me covered!",
-      "Why was the doctor so calm? Because he had a lot of patients (patience).",
-      "I would tell you a bandage joke, but it's a bit sticky.",
-      "Why did the scab refuse to leave? It was too attached to you.",
-      "Healing is slow, but so is my Wi-Fi, and we both get there eventually.",
-      "What do you call a bandage that tells jokes? A first-aid comedian.",
-      "Why did the bandage win the race? It had everything wrapped up!"
-    ]
-  };
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-  // ---------- grab elements ----------
-  const $ = (id) => document.getElementById(id);
-  const video = $("video"), canvas = $("canvas"), viewer = $("viewer");
-  const startBtn = $("startBtn"), captureBtn = $("captureBtn"), fileInput = $("fileInput");
-  const analyzeBtn = $("analyzeBtn"), statusText = $("status"), report = $("report");
-  const chatLog = $("chatLog"), chatInput = $("chatInput"), chatBtn = $("chatBtn");
-
-  let imageData = null;     // current photo (base64)
-  let lastResult = null;    // last report from Gemini
-
-  // make text safe before putting it in the page
-  function esc(t) {
-    return String(t == null ? "" : t).replace(/[&<>"']/g, (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  }
-  function setStatus(msg, isError) {
-    statusText.textContent = msg;
-    statusText.className = isError ? "error" : "";
-  }
-
-  // ---------- 1. camera ----------
-  startBtn.onclick = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      video.srcObject = stream;
-      video.style.display = "block";
-      canvas.style.display = "none";
-      $("placeholder").style.display = "none";
-      captureBtn.disabled = false;
-      setStatus("");
-    } catch (e) {
-      setStatus("Could not open the camera. Allow permission or use Upload photo.", true);
-    }
-  };
-
-  // draw any image/video onto the canvas (max 1024px wide) and keep it as base64
-  function useImage(source, w, h) {
-    const scale = Math.min(1, 1024 / w);
-    canvas.width = Math.round(w * scale);
-    canvas.height = Math.round(h * scale);
-    canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
-    imageData = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
-    video.style.display = "none";
-    canvas.style.display = "block";
-    $("placeholder").style.display = "none";
-    analyzeBtn.disabled = false;
-  }
-
-  captureBtn.onclick = () => {
-    useImage(video, video.videoWidth, video.videoHeight);
-    video.srcObject.getTracks().forEach((t) => t.stop());
-    captureBtn.disabled = true;
-    setStatus("Photo captured. Press Analyze wound.");
-  };
-
-  fileInput.onchange = () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-    const img = new Image();
-    img.onload = () => { useImage(img, img.width, img.height); setStatus("Photo loaded. Press Analyze wound."); };
-    img.src = URL.createObjectURL(file);
-  };
-
-  // ---------- 2. talk to Gemini ----------
-  async function callGemini(parts, asJson) {
-    if (API_KEY === "PASTE_YOUR_API_KEY_HERE" || API_KEY === "") {
-      throw new Error("API key missing. Paste your key in the API_KEY line of the code.");
-    }
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent?key=" + API_KEY;
-    const body = { contents: [{ parts: parts }] };
-    if (asJson) body.generationConfig = { responseMimeType: "application/json" };
-
-    // give up after 40 seconds instead of loading forever
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 40000);
-
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal
-      });
-      const data = await res.json();
-      console.log("Gemini reply:", data);          // visible in F12 > Console
-      if (data.error) throw new Error(data.error.message);
-      if (!data.candidates || !data.candidates[0].content) {
-        throw new Error("Gemini returned no answer. Try a clearer photo.");
-      }
-      return data.candidates[0].content.parts.map((p) => p.text || "").join("");
-    } catch (e) {
-      if (e.name === "AbortError") {
-        throw new Error("Timed out after 40 seconds. Check your internet, then try again.");
-      }
-      throw e;
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  // ---------- 3. analyze ----------
-  analyzeBtn.onclick = async () => {
-    const lang = $("lang").value;
-    const prompt =
-      "You are an expert first-aid assistant. Examine this photo. " +
-      "Reply ONLY with JSON using exactly these keys:\n" +
-      '{"isWound": true or false,\n' +
-      ' "message": "if isWound is false, a short, playful and funny note (for example if it is a face or an object), kindly asking for a photo of a real wound",\n' +
-      ' "woundType": "cut, scrape, burn, bruise, puncture, bite, blister, rash, etc.",\n' +
-      ' "severity": number from 1 (very mild) to 10 (life-threatening),\n' +
-      ' "urgency": "home_care" or "see_doctor" or "emergency",\n' +
-      ' "infectionRisk": "Low" or "Medium" or "High",\n' +
-      ' "healingTime": "estimated healing time",\n' +
-      ' "confidence": number 0-100,\n' +
-      ' "observations": "2 short sentences about what you can see",\n' +
-      ' "steps": ["first-aid step 1", "step 2", "..."],\n' +
-      ' "avoid": ["thing not to do", "..."],\n' +
-      ' "warningSigns": ["sign that means see a doctor", "..."],\n' +
-      ' "memeTop": "funny meme top line, max 5 words, kind, never mocking the injury or the person",\n' +
-      ' "memeBottom": "funny meme bottom line, max 5 words, a punchline",\n' +
-      ' "emoji": "one emoji that matches the mood of this wound"}\n' +
-      "Write all text values in " + lang + ". Keep the JSON keys in English. Be practical and safe.";
-
-    analyzeBtn.disabled = true;
-    viewer.classList.add("scanning");
-
-    // rotating funny loading lines
-    let j = 0;
-    setStatus(JOKES.loading[0]);
-    const timer = setInterval(() => { j = (j + 1) % JOKES.loading.length; setStatus(JOKES.loading[j]); }, 1800);
-
-    try {
-      const text = await callGemini([{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: imageData } }], true);
-      const result = JSON.parse(text.replace(/```json|```/g, "").trim());
-      lastResult = result;
-      showReport(result);
-      if (result.isWound !== false) saveHistory(result);
-      chatLog.innerHTML = "";
-      chatInput.disabled = chatBtn.disabled = (result.isWound === false);
-      setStatus("");
-    } catch (e) {
-      setStatus("Error: " + e.message, true);
-    }
-    clearInterval(timer);
-    viewer.classList.remove("scanning");
-    analyzeBtn.disabled = false;
-  };
-
-  // ---------- 4. show the report ----------
-  const urgencyText = { home_care: "Home care", see_doctor: "See a doctor", emergency: "Emergency" };
-
-  // the meme card (hidden for serious wounds)
-  function memeHtml(r, sev, urg) {
-    if (urg === "emergency" || sev >= 8) return "";
-    const fallback = pick(sev <= 3 ? JOKES.mild : JOKES.medium);
-    const top    = r.memeTop    || fallback.top;
-    const bottom = r.memeBottom || fallback.bottom;
-    const emoji  = r.emoji      || fallback.emoji;
-    return '<div class="meme"><div class="emo">' + esc(emoji) + '</div>' +
-           '<div class="t">' + esc(top) + '</div><div class="t">' + esc(bottom) + '</div></div>';
-  }
-
-  function showReport(r) {
-    if (r.isWound === false) {
-      report.innerHTML = '<div class="empty">' + esc(r.message || "No wound detected in this photo.") +
-        "<em>" + esc(pick(JOKES.noWound)) + "</em></div>";
-      return;
-    }
-    const sev = Math.max(1, Math.min(10, Number(r.severity) || 1));
-    const urg = urgencyText[r.urgency] ? r.urgency : "see_doctor";
-    const canJoke = !(urg === "emergency" || sev >= 8);
-    const list = (arr) => (arr || []).map((x) => "<li>" + esc(x) + "</li>").join("");
-    const steps = (r.steps || []).map((s) =>
-      '<label class="check"><input type="checkbox"><span>' + esc(s) + "</span></label>").join("");
-
-    report.innerHTML =
-      (urg === "emergency"
-        ? '<div class="emergency-box"><b>This may be an emergency. Get medical help now.</b><a href="tel:112">Call 112</a></div>'
-        : "") +
-      '<div class="r-top"><span class="badge ' + urg + '">' + urgencyText[urg] + "</span>" +
-      '<span class="mono" style="color:var(--muted)">Confidence ' + esc(r.confidence) + "%</span></div>" +
-      '<div class="r-type">' + esc(r.woundType) + "</div>" +
-      '<div style="color:var(--muted)">' + esc(r.observations) + "</div>" +
-      '<div class="gauge"><div class="gauge-bar"><div class="gauge-dot" style="left:' + (sev * 10 - 5) + '%"></div></div>' +
-      '<div class="gauge-lbl"><span>Mild</span><span class="mono">Severity ' + sev + "/10</span><span>Critical</span></div></div>" +
-      '<div class="stats"><div class="stat"><small>Infection risk</small><b>' + esc(r.infectionRisk) + "</b></div>" +
-      '<div class="stat"><small>Healing time</small><b>' + esc(r.healingTime) + "</b></div></div>" +
-      memeHtml(r, sev, urg) +
-      '<div class="sec-title">WHAT TO DO NOW</div>' + steps +
-      '<div class="sec-title red">AVOID</div><ul class="plain">' + list(r.avoid) + "</ul>" +
-      '<div class="sec-title amber">SEE A DOCTOR IF</div><ul class="plain">' + list(r.warningSigns) + "</ul>" +
-      '<div class="row"><button id="speakBtn">Read aloud</button>' +
-      (canJoke ? '<button id="jokeBtn">Cheer me up</button>' : "") + "</div>" +
-      '<div id="jokeBox"></div>';
-
-    $("speakBtn").onclick = () => {
-      if (!("speechSynthesis" in window)) return;
-      speechSynthesis.cancel();
-      const say = r.woundType + ". " + r.observations + ". " + (r.steps || []).join(". ");
-      const u = new SpeechSynthesisUtterance(say);
-      u.lang = $("lang").value === "Hindi" ? "hi-IN" : "en-IN";
-      speechSynthesis.speak(u);
-    };
-
-    if (canJoke) {
-      $("jokeBtn").onclick = () => {
-        const box = $("jokeBox");
-        box.style.display = "block";
-        box.textContent = "😄 " + pick(JOKES.cheerUp);
-      };
-    }
-  }
-
-  // ---------- 5. follow-up chat ----------
-  function addMsg(text, who) {
-    const d = document.createElement("div");
-    d.className = "msg " + who;
-    d.textContent = text;
-    chatLog.appendChild(d);
-    chatLog.scrollTop = chatLog.scrollHeight;
-    return d;
-  }
-
-  async function askFollowUp() {
-    const q = chatInput.value.trim();
-    if (!q || !lastResult) return;
-    chatInput.value = "";
-    addMsg(q, "me");
-    const thinking = addMsg("Thinking...", "ai");
-    chatBtn.disabled = true;
-    const prompt =
-      "You are a careful first-aid assistant. Earlier you analyzed this wound photo and produced this report: " +
-      JSON.stringify(lastResult) + "\nAnswer the person's question briefly in " + $("lang").value +
-      ", in plain text. If it could be dangerous, tell them to see a doctor.\nQuestion: " + q;
-    try {
-      const parts = [{ text: prompt }];
-      if (imageData) parts.push({ inline_data: { mime_type: "image/jpeg", data: imageData } });
-      thinking.textContent = await callGemini(parts, false);
-    } catch (e) {
-      thinking.textContent = "Error: " + e.message;
-    }
-    chatBtn.disabled = false;
-  }
-  chatBtn.onclick = askFollowUp;
-  chatInput.onkeydown = (e) => { if (e.key === "Enter") askFollowUp(); };
-
-  // ---------- 6. scan history (saved in the browser) ----------
-  function getHistory() {
-    try { return JSON.parse(localStorage.getItem("doctorai_history")) || []; } catch (e) { return []; }
-  }
-
-  function saveHistory(result) {
-    const t = document.createElement("canvas");
-    t.width = 120; t.height = 70;
-    t.getContext("2d").drawImage(canvas, 0, 0, 120, 70);
-    const list = getHistory();
-    list.unshift({ time: new Date().toLocaleString(), thumb: t.toDataURL("image/jpeg", 0.6), result: result });
-    try { localStorage.setItem("doctorai_history", JSON.stringify(list.slice(0, 6))); } catch (e) {}
-    renderHistory();
-  }
-
-  function renderHistory() {
-    const list = getHistory();
-    if (list.length === 0) return;
-    $("history").innerHTML = list.map((h, i) =>
-      '<button class="h-item" data-i="' + i + '"><img src="' + h.thumb + '" alt="">' +
-      "<span>" + esc(h.result.woundType) + "</span><small>" + esc(h.time) + "</small></button>").join("");
-    document.querySelectorAll(".h-item").forEach((b) => {
-      b.onclick = () => { lastResult = list[b.dataset.i].result; showReport(lastResult); };
+/* capture → backend proxy → Gemini. Keep the API key on the server. */
+$('capture').onclick = async () => {
+  const frame = grabFrame();
+  if (!frame.ok) return render({ classification: 'UNDETERMINED',
+    spoken_guidance: 'Image too dark. Turn on a light and try again.', hazards: ['Zero visibility'] });
+  $('capture').disabled = true;
+  try {
+    const res = await fetch('/api/evaluate', {            // <-- your backend route
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: frame.base64, voiceLog: $('voiceLog').value })
     });
+    render(await res.json());   // { classification, spoken_guidance, hazards, confidence }
+  } catch {
+    render({ classification: 'UNDETERMINED', spoken_guidance: 'Connection failed. Call emergency services if in doubt.', hazards: ['Network error'] });
   }
-  renderHistory();
-</script>
+  $('capture').disabled = false;
+};
 
+$('replay').onclick = () => lastSpeech && speak(lastSpeech);
+$('reset').onclick = () => {
+  speechSynthesis.cancel(); triage.dataset.state = 'undetermined';
+  $('pill').textContent = 'AWAITING IMAGE'; $('hazards').innerHTML = '';
+  $('guidance').textContent = 'Point the camera at the injury, then press Capture & Evaluate.';
+  $('voiceLog').value = '';
+};
+
+/* mic button: browser speech-to-text into the voice log */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SR) {
+  const rec = new SR();
+  rec.onresult = e => $('voiceLog').value = e.results[0][0].transcript;
+  rec.onend = () => $('mic').classList.remove('on');
+  $('mic').onclick = () => { rec.start(); $('mic').classList.add('on'); };
+}
+</script>
 </body>
 </html>
